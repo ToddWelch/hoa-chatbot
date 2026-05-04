@@ -1,0 +1,31 @@
+# Environment
+.env
+
+# SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Data files (real lists kept off-repo, examples retained)
+data/*.txt
+!data/*.example.txt
+data/documents/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
