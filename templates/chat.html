@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Chat with the HOA assistant{% endblock %}
+{% block content %}
+<h1>Ask about {{ community_name }}</h1>
+<p>The assistant answers based on the HOA's governing documents and recent correspondence.</p>
+
+<div class="chat-shell">
+  <div id="chat-transcript" class="chat-transcript" aria-live="polite">
+    <div class="chat-bubble assistant">
+      Hi. Ask me anything about the HOA's documents, rules, or recent communications.
+    </div>
+  </div>
+  <form id="chat-form" class="chat-input" autocomplete="off">
+    <input
+      type="text"
+      id="chat-input"
+      placeholder="Type your question..."
+      maxlength="4000"
+      aria-label="Your question"
+      required
+    >
+    <button type="submit" id="chat-submit">Send</button>
+  </form>
+</div>
+
+<p style="margin-top: 16px; color: var(--color-muted); font-size: 0.9rem;">
+  If the chatbot can't help, you can always
+  <a id="fallback-mailto" href="mailto:{{ contact_email }}">email the HOA at {{ contact_email }}</a>.
+</p>
+
+<script src="{{ url_for('static', filename='chat.js') }}" defer></script>
+{% endblock %}

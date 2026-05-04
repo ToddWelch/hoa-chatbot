@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Address not recognized{% endblock %}
+{% block content %}
+<section class="gate-card">
+  <h1>That address was not recognized</h1>
+  <p>
+    We could not find that address in the {{ community_name }} resident list.
+    A few things to try:
+  </p>
+  <ul>
+    <li>Double-check the spelling of the street name.</li>
+    <li>Use the full street type (Street, Road, Drive, etc.). The chatbot
+      will accept abbreviations too, so either form works.</li>
+    <li>Drop the apartment or unit number; only the street address is checked.</li>
+  </ul>
+  <p>
+    Still stuck? Email the HOA and they can confirm the address on file.
+  </p>
+  <p style="margin-top: 24px;">
+    <a class="button-link" href="{{ mailto_link }}">Email the HOA at {{ contact_email }}</a>
+    &nbsp;
+    <a class="button-link" href="{{ url_for('public.index') }}">Try again</a>
+  </p>
+</section>
+{% endblock %}
