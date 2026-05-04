@@ -1,0 +1,11 @@
+# Whitelisted Gmail senders. One address per line. Lines starting with
+# '#' are ignored, blank lines are ignored.
+#
+# The Gmail ingest job pulls only unread messages from these senders.
+# Edit this file (rename to whitelisted_senders.txt and place at
+# ${DATA_DIR}/whitelisted_senders.txt) and the next scheduler tick
+# picks up the change. No restart needed.
+
+# Example board members:
+# board-secretary@example.com
+# property-manager@example-firm.com

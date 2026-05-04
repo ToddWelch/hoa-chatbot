@@ -1,0 +1,14 @@
+# Example seed file for scripts/init_db.py --seed-addresses.
+#
+# One address per line. Each line is normalized via
+# services.address_normalize.normalize before insertion. Lines starting
+# with '#' are ignored, blank lines are ignored.
+
+# Replace with the real address list at first deploy, then edit through
+# the /admin/addresses page or the failed-address whitelist promotion.
+
+# 100 Main St
+# 200 Oak Rd
+# 300 Pine Way
+# 400 Cedar Drive
+# 500 Elm Boulevard

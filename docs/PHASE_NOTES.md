@@ -148,3 +148,35 @@ One section per phase. Brief and factual, no narration.
 - Promoting a failed-address row whitelist a real entry; the address appears in `/admin/addresses` and `address_store.is_valid` returns True for it.
 - Updating community name + HOA email via `/admin/config/email` persists to the `config` table.
 
+---
+
+## Phase 6: Gmail ingest
+
+### Built
+
+- `services/gmail_auth.py`: `build_credentials`, `get_gmail_service`, `GmailIngestError`. Loads the encrypted refresh token from `config.value_encrypted` for `key='gmail_refresh_token'`; pulls client id/secret from env.
+- `services/gmail_fetch.py`: `load_whitelisted_senders`, `build_query`, `extract_subject`, `extract_text`, `extract_pdf_attachments`. Pure helpers around the Gmail API response shape.
+- `services/gmail_ingest.py`: `run_once` orchestrator + label helpers + per-message ingest. Applies `hoa-bot-processed` label on success; never marks read.
+- `scripts/gmail_oauth_setup.py`: OOB OAuth flow. Prints URL, reads code from stdin, exchanges for refresh token, encrypts via Fernet, writes to config.
+- `data/whitelisted_senders.example.txt`, `data/valid_addresses.example.txt`.
+
+### Decisions
+
+- Trinity's plan flagged `services/gmail_ingest.py` as a potential split point if it crossed 300 LOC. It crossed; the planned split applied: `gmail_auth.py` + `gmail_fetch.py` + `gmail_ingest.py`. Pre-identified split, not a silent deviation.
+- The Gmail attachment dedup uses `file_hash` (SHA-256 of bytes), NOT `gmail_message_id`, because one email can have multiple PDFs and the UNIQUE constraint on `documents.gmail_message_id` would conflict on the second attachment. The body row is the only one that records `gmail_message_id`.
+- `_ensure_processed_label` creates the label on first run; subsequent runs find it via the labels list. Idempotent.
+- Empty whitelisted-senders file -> `run_once` returns immediately with `ok: no senders` status; defensive against an unconfigured deployment.
+- The OAuth bootstrap uses `urn:ietf:wg:oauth:2.0:oob` (manual code paste). This avoids needing a local web server inside `railway run` over SSH. Newer Google docs deprecate OOB but desktop-app installed-app clients still accept it.
+
+### Limitations
+
+- Real Gmail polling, label apply, and attachment dedup require a live Gmail account + completed OAuth bootstrap. Phase 8 verification.
+- Non-PDF attachments are ignored (no DOCX, no images). v1 scope per brief.
+
+### Manual verification
+
+- `services.gmail_fetch.build_query` returns the right shape for empty + multi-sender lists.
+- `services.gmail_fetch.load_whitelisted_senders` strips comments + blank lines.
+- `services.gmail_ingest.run_once`: with no whitelisted senders, returns immediately as no-op. With senders but no refresh token, returns `errors: ["Gmail refresh token is not configured. Bootstrap with ..."]` and never raises.
+
+
