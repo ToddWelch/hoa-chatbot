@@ -1,0 +1,19 @@
+{# Shared admin nav. Used by every admin page. #}
+<nav class="admin-nav">
+  <a href="{{ url_for('admin.dashboard') }}"
+     class="{{ 'active' if request.endpoint == 'admin.dashboard' else '' }}">Dashboard</a>
+  <a href="{{ url_for('admin.documents_list') }}"
+     class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.documents') or request.endpoint == 'admin.document_toggle' or request.endpoint == 'admin.document_reembed' else '' }}">Documents</a>
+  <a href="{{ url_for('admin.conversations_list') }}"
+     class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.conversation') else '' }}">Conversations</a>
+  <a href="{{ url_for('admin.failed_addresses_list') }}"
+     class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.failed_address') else '' }}">Failed addresses</a>
+  <a href="{{ url_for('admin.addresses_list') }}"
+     class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.addresses') else '' }}">Whitelist</a>
+  <a href="{{ url_for('admin.config_view') }}"
+     class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.config') or request.endpoint == 'admin.gmail_test_run' else '' }}">Config</a>
+  <form method="post" action="{{ url_for('admin.logout') }}" style="margin-left: auto;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="button-link">Log out</button>
+  </form>
+</nav>

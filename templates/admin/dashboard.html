@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Admin dashboard{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+
+<h1>Dashboard</h1>
+
+<section class="admin-grid">
+  <div class="admin-card">
+    <div class="num">{{ documents_count }}</div>
+    <div class="label">Documents</div>
+  </div>
+  <div class="admin-card">
+    <div class="num">{{ chunks_count }}</div>
+    <div class="label">Chunks</div>
+  </div>
+  <div class="admin-card">
+    <div class="num">{{ chats_today }}</div>
+    <div class="label">Chats (24h)</div>
+  </div>
+  <div class="admin-card">
+    <div class="num">{{ chats_30d }}</div>
+    <div class="label">Chats (30d)</div>
+  </div>
+  <div class="admin-card">
+    <div class="num">{{ failed_addr_count }}</div>
+    <div class="label">Failed gate attempts</div>
+  </div>
+  <div class="admin-card">
+    <div class="num">{{ needs_ocr_count }}</div>
+    <div class="label">PDFs needing OCR</div>
+  </div>
+  <div class="admin-card">
+    <div class="num">{{ addresses_count }}</div>
+    <div class="label">Whitelisted addresses</div>
+  </div>
+</section>
+
+<section class="admin-card" style="margin-top: 16px;">
+  <h2>Gmail ingest</h2>
+  {% if gmail_last_at %}
+    <p>Last run: <strong>{{ gmail_last_at }}</strong></p>
+    <p>Status: {{ gmail_last_status or 'unknown' }}</p>
+  {% else %}
+    <p>Gmail ingest has not run yet. Bootstrap OAuth via the deploy runbook, then click "Test ingest" on the Config page.</p>
+  {% endif %}
+</section>
+{% endblock %}

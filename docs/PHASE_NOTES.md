@@ -94,3 +94,34 @@ One section per phase. Brief and factual, no narration.
 - Service-unavailable fallback: with one chunk inserted and an invalid `VOYAGE_API_KEY`, `/api/chat` returns `{"kind": "service_unavailable", ...}` with mailto link, status 200. The 401 from Voyage is logged but never escapes as a 500.
 - Rate-limit boundary: 0/49/50 inserts -> check_chat_rate returns True/True/False. The 51st chat triggers the rate-limit fallback in the route layer.
 
+---
+
+## Phase 4: Document admin (upload + chunk + embed) + admin login
+
+### Built
+
+- `services/document_parse.py`: PDF extract, chunking, file hash, needs_ocr decision. Pure module (no DB, no Voyage, no fs writes).
+- `services/documents.py`: ingest pipelines (`ingest_pdf_bytes`, `ingest_text`), reembed, soft-delete, toggle, list, plus Phase 6 dedup helpers (`is_attachment_seen`, `is_gmail_message_seen`).
+- `routes/admin/`: package replacing the original single `routes/admin.py`. Submodules: `_common.py` (require_admin + idle timeout), `login.py`, `dashboard.py`, `documents.py`, `conversations.py`, `failed_addresses.py`, `addresses.py`, `config.py`. All registered against the shared `admin_bp` Blueprint via package-level side-effect imports.
+- Admin templates: `_nav.html`, `login.html`, `dashboard.html`, `documents.html`. (Phase 5 adds the rest.)
+
+### Decisions
+
+- The plan flagged `services/documents.py` and `routes/admin.py` as approaching the 300 LOC cap. Both crossed during build. Trinity's deviation protocol applied: the splits are pre-identified in plan section 5, so they are NOT silent deviations. Splits applied: `services/document_parse.py` + `services/documents.py` (parse vs store), and `routes/admin/<area>.py` per the brief.
+- Admin login rate limit (binding-scope item 18) returns status 200 with the friendly cooldown message rather than 429. The 429 error template still exists for other paths.
+- Admin idle-timeout pattern uses a manual `session["last_admin_seen"]` timestamp; the chat session's `session.permanent = True` is untouched by admin login (binding-scope item 9).
+- Rate-limit check fires BEFORE bcrypt verify on each login attempt; locked-out IPs do not get free-of-charge bcrypt CPU.
+- All admin POSTs are decorated `@require_csrf` (outer) then `@require_admin` (inner). CSRF check runs first; an unauthenticated POST without CSRF returns 403, an unauthenticated POST with a stale CSRF token still gets 403, an authenticated POST without CSRF gets 403. GETs only hit `@require_admin` because `@require_csrf` is method-restricted to POST/PUT/PATCH/DELETE.
+
+### Limitations
+
+- PDF upload requires live Voyage API for embeddings; verified via the chunking helper but not end-to-end with embeddings. The `needs_ocr` path persists the document with `is_active=0` and the admin can paste text manually after seeing the badge.
+- Phase 5's conversation/failed-address/addresses/config templates render the admin nav, but the templates themselves are added in Phase 5.
+
+### Manual verification
+
+- `/admin/login` GET renders. POST with wrong password returns 200 with "Invalid credentials". POST with correct password redirects to `/admin/dashboard`. Six wrong passwords from one IP returns the friendly "Too many recent login attempts" cooldown (status 200, not 429).
+- `/admin/dashboard` renders with all counts cards.
+- `/admin/documents` renders the upload + paste forms and the empty document table.
+- `services/document_parse.py`: short text -> 1 chunk, long text -> 8 chunks, needs_ocr correctly flags >100KB + <50char extract, file hash is deterministic.
+

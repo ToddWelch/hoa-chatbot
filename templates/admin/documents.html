@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Documents{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+
+<h1>Documents</h1>
+
+<section class="admin-card" style="margin-bottom: 16px;">
+  <h2>Upload PDF</h2>
+  <form class="stacked" method="post" action="{{ url_for('admin.documents_upload') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="up-title">Title</label>
+    <input type="text" id="up-title" name="title" placeholder="e.g. CCRs (2023 amendment)">
+    <label for="up-pdf">PDF file</label>
+    <input type="file" id="up-pdf" name="pdf" accept="application/pdf" required>
+    <button type="submit">Upload</button>
+  </form>
+</section>
+
+<section class="admin-card" style="margin-bottom: 16px;">
+  <h2>Paste text</h2>
+  <p style="color: var(--color-muted);">Use this for documents pypdf cannot extract from, or for short bulletins.</p>
+  <form class="stacked" method="post" action="{{ url_for('admin.documents_paste') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="pst-title">Title</label>
+    <input type="text" id="pst-title" name="title" required>
+    <label for="pst-text">Text</label>
+    <textarea id="pst-text" name="full_text" rows="8" required></textarea>
+    <button type="submit">Save</button>
+  </form>
+</section>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Source</th>
+      <th>Chunks</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in documents %}
+    <tr>
+      <td>{{ d.title }}</td>
+      <td>{{ d.source }}</td>
+      <td>{{ d.chunk_count }}</td>
+      <td>
+        {% if d.is_active %}
+          <span class="badge">active</span>
+        {% else %}
+          <span class="badge muted">inactive</span>
+        {% endif %}
+        {% if d.needs_ocr %}
+          <span class="badge warn">needs OCR</span>
+        {% endif %}
+      </td>
+      <td>{{ d.created_at }}</td>
+      <td>
+        <form method="post" action="{{ url_for('admin.document_toggle', doc_id=d.id) }}" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="button-link" type="submit">Toggle</button>
+        </form>
+        <form method="post" action="{{ url_for('admin.document_reembed', doc_id=d.id) }}" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="button-link" type="submit">Reembed</button>
+        </form>
+        {% if d.needs_ocr %}
+          <details style="display:inline;">
+            <summary class="button-link" style="display:inline-block;">Paste text</summary>
+            <form method="post" action="{{ url_for('admin.document_paste_text', doc_id=d.id) }}" style="margin-top: 8px;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <textarea name="full_text" rows="6" placeholder="Paste extracted text" required style="width: 100%;"></textarea>
+              <button class="button-link" type="submit">Save text</button>
+            </form>
+          </details>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align: center; color: var(--color-muted);">No documents yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
