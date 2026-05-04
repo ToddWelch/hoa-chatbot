@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Config{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+
+<h1>Configuration</h1>
+
+<section class="admin-card" style="margin-bottom: 16px;">
+  <h2>Community details</h2>
+  <form class="stacked" method="post" action="{{ url_for('admin.config_update_email') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="cn">Community name</label>
+    <input type="text" id="cn" name="community_name" value="{{ community_name }}" required>
+
+    <label for="contact">HOA contact email</label>
+    <input type="email" id="contact" name="hoa_contact_email" value="{{ hoa_contact_email }}" required>
+
+    <button type="submit">Save</button>
+  </form>
+</section>
+
+<section class="admin-card" style="margin-bottom: 16px;">
+  <h2>Change admin password</h2>
+  <form class="stacked" method="post" action="{{ url_for('admin.config_change_password') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="cp">Current password</label>
+    <input type="password" id="cp" name="current_password" required>
+    <label for="np">New password</label>
+    <input type="password" id="np" name="new_password" minlength="8" required>
+    <label for="ncp">Confirm new password</label>
+    <input type="password" id="ncp" name="confirm_password" minlength="8" required>
+    <button type="submit">Change password</button>
+  </form>
+</section>
+
+<section class="admin-card">
+  <h2>Gmail ingest</h2>
+  {% if gmail_token_present %}
+    <p><span class="badge">connected</span></p>
+  {% else %}
+    <p><span class="badge warn">not connected</span></p>
+    <p style="color: var(--color-muted); font-size: 0.9rem;">
+      Run <code>railway run python scripts/gmail_oauth_setup.py</code> to bootstrap the refresh token.
+    </p>
+  {% endif %}
+
+  <p>
+    Last run: <strong>{{ gmail_last_at or 'never' }}</strong><br>
+    Status: {{ gmail_last_status or 'n/a' }}
+  </p>
+
+  <form method="post" action="{{ url_for('admin.gmail_test_run') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button-link" type="submit" {% if not gmail_token_present %}disabled{% endif %}>
+      Run ingest now
+    </button>
+  </form>
+</section>
+{% endblock %}

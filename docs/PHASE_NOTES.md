@@ -125,3 +125,26 @@ One section per phase. Brief and factual, no narration.
 - `/admin/documents` renders the upload + paste forms and the empty document table.
 - `services/document_parse.py`: short text -> 1 chunk, long text -> 8 chunks, needs_ocr correctly flags >100KB + <50char extract, file hash is deterministic.
 
+---
+
+## Phase 5: Admin conversations + failed addresses + addresses + config
+
+### Built
+
+- Templates (routes already wired in Phase 4): `admin/conversations.html`, `admin/conversation_view.html`, `admin/failed_addresses.html`, `admin/addresses.html`, `admin/config.html`.
+- The `/admin/addresses` page (added per plan-stage decision 1): list whitelisted addresses + manual add + remove.
+- The `/admin/failed-addresses` whitelist-promotion flow (one-click; calls `address_store.add` with `source='failed_promotion'`).
+- The `/admin/config` page exposes community name, HOA contact email, password change, Gmail ingest status panel + "Run ingest now" button.
+
+### Decisions
+
+- The `/admin/addresses` "Remove" button uses `onclick="return confirm(...)"` to make accidental delete one extra click. Standard browser confirm is enough for a single-admin tool; no JS framework needed.
+- `/admin/conversations` shows the first message preview truncated at 80 chars to keep the list scannable.
+- The Gmail "Run ingest now" button is `disabled` until the OAuth refresh token is present in the config table, so admins do not click it before bootstrap.
+
+### Manual verification
+
+- All six admin pages return 200 after login.
+- Promoting a failed-address row whitelist a real entry; the address appears in `/admin/addresses` and `address_store.is_valid` returns True for it.
+- Updating community name + HOA email via `/admin/config/email` persists to the `config` table.
+

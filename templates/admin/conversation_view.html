@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Conversation {{ conv.id }}{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+
+<p><a href="{{ url_for('admin.conversations_list') }}">&larr; Back to conversations</a></p>
+
+<h1>Conversation #{{ conv.id }}</h1>
+<p>
+  Address: <strong>{{ conv.normalized_address }}</strong> &middot;
+  Started: {{ conv.created_at }}
+</p>
+
+<div class="chat-shell" style="height: auto; max-height: 600px;">
+  <div class="chat-transcript">
+    {% for m in messages %}
+      <div class="chat-bubble {{ 'user' if m.role == 'user' else 'assistant' }}">
+        <small style="color: var(--color-muted); display: block;">{{ m.role }} &middot; {{ m.created_at }}</small>
+        {{ m.content }}
+      </div>
+    {% else %}
+      <p style="color: var(--color-muted); padding: 16px;">No messages.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

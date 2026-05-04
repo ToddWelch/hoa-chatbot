@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Failed addresses{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+
+<h1>Failed gate attempts</h1>
+<p>Last 200 failed address submissions, newest first. Click "Whitelist" to add the normalized address to the resident list.</p>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Raw input</th>
+      <th>Normalized</th>
+      <th>When</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in attempts %}
+    <tr>
+      <td>{{ a.raw_address }}</td>
+      <td><code>{{ a.normalized_address }}</code></td>
+      <td>{{ a.created_at }}</td>
+      <td>
+        <form method="post" action="{{ url_for('admin.failed_address_to_whitelist') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="raw_address" value="{{ a.raw_address }}">
+          <input type="hidden" name="normalized_address" value="{{ a.normalized_address }}">
+          <button class="button-link" type="submit">Whitelist</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="text-align: center; color: var(--color-muted);">No failed attempts.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

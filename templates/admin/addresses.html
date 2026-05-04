@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Address whitelist{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+
+<h1>Address whitelist</h1>
+<p>Residents whose street address grants chat access. Stored DB-backed in the <code>addresses</code> table.</p>
+
+<section class="admin-card" style="margin-bottom: 16px;">
+  <h2>Add address</h2>
+  <form class="stacked" method="post" action="{{ url_for('admin.addresses_add') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="add-addr">Street address</label>
+    <input type="text" id="add-addr" name="raw_address" placeholder="e.g. 123 Main St" required>
+    <button type="submit">Add</button>
+  </form>
+</section>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Normalized</th>
+      <th>Original</th>
+      <th>Source</th>
+      <th>Note</th>
+      <th>Added</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in addresses %}
+    <tr>
+      <td><code>{{ a.normalized_address }}</code></td>
+      <td>{{ a.raw_address or '' }}</td>
+      <td>{{ a.source }}</td>
+      <td>{{ a.note or '' }}</td>
+      <td>{{ a.created_at }}</td>
+      <td>
+        <form method="post" action="{{ url_for('admin.addresses_remove', address_id=a.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="button-link danger" type="submit"
+                  onclick="return confirm('Remove this address from the whitelist?')">Remove</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align: center; color: var(--color-muted);">No addresses yet. Use the form above or seed via <code>scripts/init_db.py --seed-addresses</code>.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

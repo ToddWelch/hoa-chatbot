@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Conversations{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+
+<h1>Conversations</h1>
+<p>The last 100 conversations, newest first.</p>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Address</th>
+      <th>Started</th>
+      <th>Messages</th>
+      <th>First message</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in conversations %}
+    <tr>
+      <td>{{ c.normalized_address }}</td>
+      <td>{{ c.created_at }}</td>
+      <td>{{ c.msg_count }}</td>
+      <td>{{ (c.first_msg or '')[:80] }}{% if c.first_msg and c.first_msg|length > 80 %}...{% endif %}</td>
+      <td><a class="button-link" href="{{ url_for('admin.conversation_view', conv_id=c.id) }}">View</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" style="text-align: center; color: var(--color-muted);">No conversations yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
