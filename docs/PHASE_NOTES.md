@@ -179,4 +179,28 @@ One section per phase. Brief and factual, no narration.
 - `services.gmail_fetch.load_whitelisted_senders` strips comments + blank lines.
 - `services.gmail_ingest.run_once`: with no whitelisted senders, returns immediately as no-op. With senders but no refresh token, returns `errors: ["Gmail refresh token is not configured. Bootstrap with ..."]` and never raises.
 
+---
+
+## Phase 7: APScheduler + retention
+
+### Built
+
+The scheduler.py and the retention sweep were already wired in Phase 1 (the scheduler imports were stubs while gmail_ingest was a stub; they all light up correctly together now).
+
+- `scheduler.py::start_scheduler` builds a UTC `BackgroundScheduler` and registers two jobs:
+  - `gmail_ingest`: interval=15min, calls `services.gmail_ingest.run_once`.
+  - `retention_sweep`: cron daily at 03:00 UTC, deletes `messages > 90d`, drops orphan `conversations`, deletes `chat_rate_log > 48h`.
+- Both jobs swallow exceptions with `logger.error(..., exc_info=True)` so a transient failure never crashes the scheduler thread.
+- `FLASK_SKIP_SCHEDULER=1` in env skips the scheduler boot; scripts (init_db, set_admin_password, gmail_oauth_setup) set this so they do not start a scheduler.
+
+### Decisions
+
+- Scheduler runs in a `BackgroundScheduler` (in-process) per the brief's requirement of `--workers 1` for gunicorn. v2 fix if traffic grows: external scheduler (Railway cron or a dedicated worker service) and `--workers 2+`.
+- Retention sweep wraps the three deletes in one `transaction()` so a partial-deletion failure leaves the DB in a clean state.
+
+### Manual verification
+
+- `app.apscheduler.get_jobs()` after factory boot shows two jobs: `gmail_ingest` (interval 15 min) and `retention_sweep` (cron 03:00 UTC). Next-run-time on each is non-null.
+- Manual `_job_retention_sweep(app)` invocation: an inserted `messages` row dated 100 days ago is deleted; a fresh row is kept. An inserted `chat_rate_log` row dated 50 hours ago is deleted; a fresh row is kept. Log line: `retention_sweep: messages=1 conversations=0 chat_rate_log=1`.
+
 
