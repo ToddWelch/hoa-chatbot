@@ -374,3 +374,9 @@ Pub/Sub, document versioning, per-resident accounts, translation, mobile
 wrapper, analytics dashboard beyond counts, 2FA, automated backups.
 
 See `BUILD_BRIEF.md` section 13 for the full list.
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).
