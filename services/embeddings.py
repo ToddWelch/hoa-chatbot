@@ -1,8 +1,14 @@
 """Voyage embeddings client.
 
-Phase 1: ships EMBEDDING_DIM constant and validate_existing_chunks so the
-app factory boots. Phase 3 fills in embed_texts/embed_one against the
-Voyage API.
+Pattern lifted from
+`/home/todd/projects/Welch-Command-Center/backend/app/services/embeddings_service.py`,
+collapsed to module-level free functions because there is no Flask
+extension lifecycle to attach to.
+
+Single exception type (EmbeddingsUnavailable) bubbles every Voyage
+failure mode (HTTP 4xx/5xx, timeout, missing API key, dim mismatch).
+Routes turn this into the friendly "AI service is having trouble"
+fallback per binding-scope items (chat error UX).
 
 EMBEDDING_DIM is a module constant rather than env-driven because:
 - changing it without re-embedding corrupts retrieval (binding-scope item 7);
@@ -12,8 +18,7 @@ EMBEDDING_DIM is a module constant rather than env-driven because:
   flipped the constant but forgot to re-embed the documents.
 
 Voyage `voyage-3-lite` returns 512-dim float32 vectors per
-https://docs.voyageai.com/docs/embeddings (confirmed at brief open
-decision 2; revisit if the model is swapped).
+https://docs.voyageai.com/docs/embeddings .
 """
 
 from __future__ import annotations
@@ -21,10 +26,9 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import numpy as np
+import httpx
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -34,39 +38,102 @@ _EMBEDDING_BYTES = EMBEDDING_DIM * 4  # float32 = 4 bytes
 
 _VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings"
 _VOYAGE_TIMEOUT_SEC = 15.0
+_BATCH_MAX = 128  # Voyage's per-request input cap; we batch larger lists.
 
 
 class EmbeddingsUnavailable(Exception):
-    """Raised when the Voyage API call fails or returns malformed data.
+    """Raised on any Voyage failure mode (HTTP error, timeout, malformed response)."""
 
-    Catch surface for callers: every Voyage failure mode (HTTP error,
-    timeout, dim mismatch, missing API key) bubbles as this single
-    exception type. routes/public.py turns this into the friendly
-    "AI service is having trouble" copy.
+
+def _voyage_api_key() -> str:
+    """Fetch the Voyage key from env. Raises EmbeddingsUnavailable if absent."""
+    key = os.environ.get("VOYAGE_API_KEY", "")
+    if not key:
+        raise EmbeddingsUnavailable("VOYAGE_API_KEY env var is not set")
+    return key
+
+
+def _voyage_model() -> str:
+    """Read the model id from env, defaulting to voyage-3-lite."""
+    return os.environ.get("VOYAGE_MODEL", "voyage-3-lite")
+
+
+def _post_voyage(texts: list[str], input_type: str = "document") -> list[np.ndarray]:
+    """POST a batch of texts to Voyage. Returns float32 vectors.
+
+    Raises EmbeddingsUnavailable on any HTTP failure or dim mismatch.
+    `input_type` is "document" for indexing and "query" for retrieval;
+    Voyage uses different prompt prefixes internally.
     """
+    api_key = _voyage_api_key()
+    model = _voyage_model()
+    body = {
+        "model": model,
+        "input": texts,
+        "input_type": input_type,
+    }
+    try:
+        with httpx.Client(timeout=_VOYAGE_TIMEOUT_SEC) as client:
+            resp = client.post(
+                _VOYAGE_API_URL,
+                headers={"Authorization": f"Bearer {api_key}"},
+                json=body,
+            )
+    except (httpx.HTTPError, httpx.TimeoutException) as exc:
+        raise EmbeddingsUnavailable(f"Voyage HTTP error: {exc}") from exc
+
+    if resp.status_code != 200:
+        raise EmbeddingsUnavailable(
+            f"Voyage returned {resp.status_code}: {resp.text[:200]}"
+        )
+
+    try:
+        payload = resp.json()
+        rows = payload["data"]
+    except (KeyError, ValueError) as exc:
+        raise EmbeddingsUnavailable(f"Voyage malformed response: {exc}") from exc
+
+    if len(rows) != len(texts):
+        raise EmbeddingsUnavailable(
+            f"Voyage returned {len(rows)} embeddings for {len(texts)} inputs"
+        )
+
+    vectors: list[np.ndarray] = []
+    for r in rows:
+        emb = r.get("embedding")
+        if emb is None:
+            raise EmbeddingsUnavailable("Voyage response row missing 'embedding' field")
+        vec = np.asarray(emb, dtype=np.float32)
+        if vec.shape != (EMBEDDING_DIM,):
+            raise EmbeddingsUnavailable(
+                f"Voyage returned dim {vec.shape} but EMBEDDING_DIM={EMBEDDING_DIM}"
+            )
+        vectors.append(vec)
+    return vectors
 
 
-def embed_texts(texts: list[str]) -> list:
-    """Return a list of np.ndarray vectors, one per input string.
+def embed_texts(texts: list[str], input_type: str = "document") -> list[np.ndarray]:
+    """Embed a list of strings. Batches into _BATCH_MAX-sized chunks.
 
-    Phase 3 implementation. Stub here so Phase 1 imports do not fail.
+    `input_type` is "document" for indexing pipelines and "query" for
+    retrieval. Voyage applies different prompt prefixes internally.
     """
-    raise NotImplementedError("Phase 3 wires the Voyage call")
+    if not texts:
+        return []
+    out: list[np.ndarray] = []
+    for i in range(0, len(texts), _BATCH_MAX):
+        batch = texts[i : i + _BATCH_MAX]
+        out.extend(_post_voyage(batch, input_type=input_type))
+    return out
 
 
-def embed_one(text: str) -> "np.ndarray":
-    """Convenience wrapper for embedding a single string."""
-    return embed_texts([text])[0]
+def embed_one(text: str, input_type: str = "document") -> np.ndarray:
+    """Embed a single string. Convenience wrapper."""
+    return embed_texts([text], input_type=input_type)[0]
 
 
-def serialize(vec) -> bytes:
-    """Convert a float32 numpy array into the BLOB representation.
-
-    Validates shape and dtype before persisting so the boot-time
-    validator can rely on every BLOB being EMBEDDING_DIM * 4 bytes.
-    """
-    import numpy as np  # local import to avoid hard dep at Phase 1 boot
-
+def serialize(vec: np.ndarray) -> bytes:
+    """Convert a float32 numpy array into the BLOB representation."""
     if vec.dtype != np.float32:
         vec = vec.astype(np.float32)
     if vec.shape != (EMBEDDING_DIM,):
@@ -76,10 +143,8 @@ def serialize(vec) -> bytes:
     return vec.tobytes()
 
 
-def deserialize(blob: bytes):
+def deserialize(blob: bytes) -> np.ndarray:
     """Reverse of serialize."""
-    import numpy as np
-
     if len(blob) != _EMBEDDING_BYTES:
         raise EmbeddingsUnavailable(
             f"chunk BLOB length {len(blob)} does not match expected {_EMBEDDING_BYTES}"
@@ -110,11 +175,3 @@ def validate_existing_chunks(conn: sqlite3.Connection) -> None:
             f"without re-embedding. Run: DELETE FROM chunks; then click 'reembed' on each "
             f"document in /admin/documents."
         )
-
-
-def _voyage_api_key() -> str:
-    """Fetch the Voyage key from env. Raises EmbeddingsUnavailable if absent."""
-    key = os.environ.get("VOYAGE_API_KEY", "")
-    if not key:
-        raise EmbeddingsUnavailable("VOYAGE_API_KEY env var is not set")
-    return key

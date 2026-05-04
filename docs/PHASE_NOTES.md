@@ -64,3 +64,33 @@ One section per phase. Brief and factual, no narration.
 - Address normalization checked against six test cases (incl. "way" preservation, apt/unit strip, abbreviation expansion).
 - Flask test client: GET / returns gate page with CSRF meta tag; POST /gate with seeded address sets session and redirects to /chat; POST /gate with unknown address logs to failed_address_attempts and redirects to /gate/failed; POST /gate without CSRF returns 403.
 
+---
+
+## Phase 3: Embeddings, retrieval, chat completion
+
+### Built
+
+- `services/embeddings.py`: full Voyage HTTP client (httpx). `embed_texts`, `embed_one`, `serialize`, `deserialize`, `validate_existing_chunks`. `EmbeddingsUnavailable` umbrella exception. Module-level `EMBEDDING_DIM=512`. Batched at 128 inputs/request.
+- `services/retrieval.py`: cosine top-k over the chunks table joined with active documents only. `chunk_count` helper for the empty-table check.
+- `services/chat.py`: `handle_chat` orchestrates rate-limit gate -> empty-chunks check -> Voyage retrieval -> Anthropic call -> persist messages + record rate-limit row in one transaction. Exception subclasses: `ChatRateLimited`, `ChatNoChunks`, `ChatServiceUnavailable`. Anthropic call uses the official SDK; model id from `ANTHROPIC_MODEL` env (default `claude-haiku-4-5`).
+- `routes/public.py::api_chat` (built in Phase 2 stub, fully wired now): catches each chat exception subclass and returns the matching JSON shape (always 200 to the browser, never 500). Mailto fallback URI built per binding-scope item 15.
+
+### Decisions
+
+- System prompt anchors the model to "the context below" and instructs it to cite document titles and decline gracefully when the answer is not in the documents (per brief 6.2 and 6.6). Community name pulled from `config.community_name`.
+- The transaction wrapping persistence + rate-limit record means a partial failure doesn't leave the rate-limit row without the conversation row (or vice versa).
+- Cookie history (last 6 message pairs = 12 entries) is the hot cache; the conversations + messages tables are the source of truth. Browser-side: chat.js only sends the new message; the route reads history out of the session cookie.
+
+### Limitations
+
+- ANN indexing not implemented; full table scan over chunks. Plan deferred to v2 if chunks > ~50k. v1 expects ~3000.
+- Anthropic chat-completion roundtrip with real model output requires live API keys (Phase 8 verification).
+- Voyage embedding of real text requires live API keys (Phase 8 verification).
+
+### Manual verification (with placeholder/invalid API keys)
+
+- Gate to `/chat` works; `/api/chat` POST without CSRF returns 403.
+- Empty-chunks fallback: with no chunks in the table, `/api/chat` returns `{"kind": "setup_in_progress", ...}` with mailto link, status 200.
+- Service-unavailable fallback: with one chunk inserted and an invalid `VOYAGE_API_KEY`, `/api/chat` returns `{"kind": "service_unavailable", ...}` with mailto link, status 200. The 401 from Voyage is logged but never escapes as a 500.
+- Rate-limit boundary: 0/49/50 inserts -> check_chat_rate returns True/True/False. The 51st chat triggers the rate-limit fallback in the route layer.
+
