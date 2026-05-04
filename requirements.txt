@@ -1,0 +1,19 @@
+# HOA Chatbot v1 dependencies. Pinned per IMPLEMENTATION_PLAN.md section 8.
+# COST FLAG entries note paid services.
+
+Flask==3.1.0
+gunicorn==23.0.0
+APScheduler==3.10.4
+pypdf==5.1.0
+bcrypt==4.2.1
+cryptography==44.0.0
+python-dotenv==1.0.1
+httpx==0.28.1
+# COST FLAG: Anthropic Haiku, ~$0.001 per chat at typical context size.
+anthropic==0.39.0
+# COST FLAG: Voyage embeddings, free tier covers v1, monitor as scale grows.
+voyageai==0.3.2
+google-api-python-client==2.151.0
+google-auth==2.36.0
+google-auth-oauthlib==1.2.1
+numpy==2.1.3
