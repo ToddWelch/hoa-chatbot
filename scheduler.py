@@ -1,9 +1,9 @@
 """APScheduler boot. Phase 7 wires the jobs.
 
-Pattern from
-`/home/todd/projects/Welch-Command-Center/backend/app/__init__.py:286-375`.
-A single BackgroundScheduler in-process; gunicorn worker pinned to 1 to
-avoid duplicate runs. Scripts skip the scheduler via FLASK_SKIP_SCHEDULER.
+Pattern from the WCC reference codebase (Flask app factory's APScheduler
+integration block). A single BackgroundScheduler in-process; gunicorn
+worker pinned to 1 to avoid duplicate runs. Scripts skip the scheduler
+via FLASK_SKIP_SCHEDULER.
 
 Two jobs:
 - gmail_ingest: every 15 minutes (per binding-scope item 16).

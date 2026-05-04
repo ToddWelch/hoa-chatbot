@@ -1,9 +1,8 @@
 """Voyage embeddings client.
 
-Pattern lifted from
-`/home/todd/projects/Welch-Command-Center/backend/app/services/embeddings_service.py`,
-collapsed to module-level free functions because there is no Flask
-extension lifecycle to attach to.
+Pattern lifted from the WCC reference codebase (embeddings service
+module), collapsed to module-level free functions because there is no
+Flask extension lifecycle to attach to.
 
 Single exception type (EmbeddingsUnavailable) bubbles every Voyage
 failure mode (HTTP 4xx/5xx, timeout, missing API key, dim mismatch).

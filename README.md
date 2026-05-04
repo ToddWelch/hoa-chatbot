@@ -230,13 +230,13 @@ Container user is "claude" (UID mismatch with host user "todd"). If git
 permission issues hit:
 
 ```sh
-git config --global --add safe.directory /home/todd/projects/hoa-chatbot
+git config --global --add safe.directory ~/projects/hoa-chatbot
 ```
 
 Set the SSH remote (never HTTPS):
 
 ```sh
-cd /home/todd/projects/hoa-chatbot
+cd ~/projects/hoa-chatbot
 git remote add origin git@github.com:ToddWelch/hoa-chatbot.git
 git push -u origin feat/hoa-chatbot-v1
 ```

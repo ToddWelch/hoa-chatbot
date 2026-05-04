@@ -1,9 +1,8 @@
 """Fernet symmetric encryption helpers.
 
-Pattern lifted from
-`/home/todd/projects/Welch-Command-Center/mcp-gmail/src/mcp_gmail/crypto.py`
-and collapsed for HOA's simpler needs (single key, no rotation surface
-in v1, single key-value config table).
+Pattern lifted from the WCC reference codebase (Fernet helper module
+in mcp-gmail) and collapsed for HOA's simpler needs (single key, no
+rotation surface in v1, single key-value config table).
 
 The only encrypted value in v1 is the Gmail refresh token, stored as a
 Fernet token string in `config.value_encrypted` for `key='gmail_refresh_token'`.

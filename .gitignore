@@ -1,26 +1,38 @@
 # Environment
 .env
+.env.*
+
+# Secrets, keys, credentials
+*.key
+*.pem
+cookies.txt
+credentials.json
+id_ed25519
+id_ed25519.pub
+id_rsa
+id_rsa.pub
+token.json
 
 # SQLite
 *.db
 *.db-journal
-*.db-wal
 *.db-shm
+*.db-wal
 
 # Data files (real lists kept off-repo, examples retained)
-data/*.txt
 !data/*.example.txt
+data/*.txt
 data/documents/
 
 # Python
-__pycache__/
 *.pyc
-*.pyo
 *.pyd
-.venv/
-venv/
+*.pyo
 .pytest_cache/
 .ruff_cache/
+.venv/
+__pycache__/
+venv/
 
 # IDE
 .idea/

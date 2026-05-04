@@ -1,8 +1,8 @@
 """Flask application factory.
 
-Pattern lifted from
-`/home/todd/projects/Welch-Command-Center/backend/app/__init__.py`,
-collapsed for HOA's smaller surface area.
+Pattern lifted from the WCC reference codebase (Flask app factory +
+blueprint registration + APScheduler init), collapsed for HOA's smaller
+surface area.
 
 Phase 1: factory, blueprint registration, error handlers, logging,
 session lifetime config. Phase 3 adds EMBEDDING_DIM validation. Phase 7
